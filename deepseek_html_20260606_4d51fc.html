@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>邮箱池管理 - 添加邮箱</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 500px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f9f9f9;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h2 {
+            text-align: center;
+            color: #333;
+        }
+        label {
+            font-weight: bold;
+            display: block;
+            margin: 15px 0 5px;
+        }
+        input[type="password"], textarea {
+            width: 100%;
+            padding: 10px;
+            font-size: 16px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            box-sizing: border-box;
+        }
+        textarea {
+            height: 200px;
+            resize: vertical;
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            font-size: 18px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 15px;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        #status {
+            margin-top: 15px;
+            text-align: center;
+            color: #d32f2f;
+        }
+        #status.success {
+            color: #2e7d32;
+        }
+        .info {
+            font-size: 14px;
+            color: #666;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>📬 邮箱池管理</h2>
+        <div id="loginSection">
+            <label for="password">管理密码</label>
+            <input type="password" id="password" placeholder="输入管理密码">
+            <button onclick="login()">验证</button>
+            <div id="status"></div>
+        </div>
+
+        <div id="adminSection" style="display: none;">
+            <label for="emailInput">输入要补充的邮箱地址</label>
+            <textarea id="emailInput" placeholder="支持逗号、空格、换行分隔&#10;例如：&#10;user1@example.com&#10;user2@example.com, user3@example.com"></textarea>
+            <div class="info">当前邮箱池剩余 <span id="poolCount">-</span> 个邮箱</div>
+            <button onclick="addEmails()">补充邮箱到池中</button>
+            <div id="status"></div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+        import { getDatabase, ref, get, set } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
+
+        // ===== 配置区 =====
+        // 修改为你自己设置的管理密码（不要用 123456）
+        const ADMIN_PASSWORD = '369369';
+
+        // 和主页 index.html 保持完全一样的 Firebase 配置
+        const firebaseConfig = {
+            apiKey: "AIzaSyXXXXXXXXXXXXXXXXXXXXXX",
+            authDomain: "email-share.firebaseapp.com",
+            databaseURL: "https://email-share-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "email-share",
+            storageBucket: "email-share.appspot.com",
+            messagingSenderId: "123456789",
+            appId: "1:123456789:web:abcdef"
+        };
+        // ==================
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+        const poolRef = ref(db, 'emailPool');
+
+        let currentEmails = [];
+
+        // 显示当前邮箱池数量
+        async function updateCount() {
+            try {
+                const snapshot = await get(poolRef);
+                currentEmails = snapshot.val() || [];
+                document.getElementById('poolCount').textContent = currentEmails.length;
+            } catch (e) {
+                document.getElementById('poolCount').textContent = '加载失败';
+            }
+        }
+
+        // 验证密码
+        window.login = function() {
+            const pwd = document.getElementById('password').value;
+            const status = document.getElementById('status');
+            if (pwd === ADMIN_PASSWORD) {
+                document.getElementById('loginSection').style.display = 'none';
+                document.getElementById('adminSection').style.display = 'block';
+                status.textContent = '';
+                updateCount();
+            } else {
+                status.textContent = '密码错误';
+                status.className = '';
+            }
+        };
+
+        // 添加邮箱
+        window.addEmails = async function() {
+            const status = document.getElementById('status');
+            const raw = document.getElementById('emailInput').value.trim();
+            if (!raw) {
+                status.textContent = '请输入邮箱地址';
+                status.className = '';
+                return;
+            }
+
+            // 支持逗号、空格、换行分隔，并过滤空字符串
+            const newEmails = raw
+                .split(/[,\s\n]+/)
+                .map(e => e.trim())
+                .filter(e => e !== '');
+
+            if (newEmails.length === 0) {
+                status.textContent = '未识别到有效邮箱';
+                status.className = '';
+                return;
+            }
+
+            // 简单的邮箱格式检查（可选，不强制）
+            const invalid = newEmails.filter(e => !e.includes('@'));
+            if (invalid.length > 0) {
+                status.textContent = `以下格式可能不正确: ${invalid.join(', ')}`;
+                status.className = '';
+                return;
+            }
+
+            try {
+                // 先获取最新数组，再追加
+                const snapshot = await get(poolRef);
+                const existing = snapshot.val() || [];
+                const updated = [...existing, ...newEmails];
+                await set(poolRef, updated);
+
+                document.getElementById('emailInput').value = '';
+                status.textContent = `成功添加 ${newEmails.length} 个邮箱！`;
+                status.className = 'success';
+                updateCount();
+            } catch (error) {
+                status.textContent = '添加失败，请检查网络或权限';
+                status.className = '';
+                console.error(error);
+            }
+        };
+
+        // 支持回车键提交密码
+        document.getElementById('password').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') login();
+        });
+    </script>
+</body>
+</html>
