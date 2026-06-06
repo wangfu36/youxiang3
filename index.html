@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>共享邮箱池 (实时同步)</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; margin-top: 80px; }
+        #emailDisplay { font-size: 24px; font-weight: bold; margin: 30px; padding: 20px; border: 2px dashed #4CAF50; display: inline-block; min-width: 250px; }
+        button { font-size: 18px; padding: 10px 30px; cursor: pointer; background: #4CAF50; color: white; border: none; border-radius: 5px; }
+        button:disabled { background: #ccc; }
+        #msg { color: #666; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <h1>可用邮箱</h1>
+    <div id="emailDisplay">加载中...</div>
+    <br>
+    <button id="copyBtn">点击复制并获取下一个</button>
+    <div id="msg"></div>
+
+    <!-- Firebase SDK -->
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+        import { getDatabase, ref, onValue, runTransaction } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
+
+        // Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
+import { getAnalytics } from "firebase/analytics";
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
+
+// Your web app's Firebase configuration
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+const firebaseConfig = {
+  apiKey: "AIzaSyCLUwbTJmVE63YhrbY2g5GzvM1-8ppPXtM",
+  authDomain: "email-aca79.firebaseapp.com",
+  databaseURL: "https://email-aca79-default-rtdb.firebaseio.com",
+  projectId: "email-aca79",
+  storageBucket: "email-aca79.firebasestorage.app",
+  messagingSenderId: "83168551688",
+  appId: "1:83168551688:web:8530dc20569dcdf36102bd",
+  measurementId: "G-EGLZZZ9CWR"
+};
+        };
+        // ===============================
+
+        // Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
+        let currentEmail = '';
+
+        // 复制文本
+        async function copyToClipboard(text) {
+            try {
+                await navigator.clipboard.writeText(text);
+            } catch (err) {
+                const textarea = document.createElement('textarea');
+                textarea.value = text;
+                document.body.appendChild(textarea);
+                textarea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textarea);
+            }
+        }
+
+        // 实时监听邮箱池变化
+        onValue(poolRef, (snapshot) => {
+            const emails = snapshot.val() || [];
+            const displayDiv = document.getElementById('emailDisplay');
+            const btn = document.getElementById('copyBtn');
+            if (emails.length === 0) {
+                displayDiv.textContent = '邮箱已用完';
+                btn.disabled = true;
+                currentEmail = '';
+            } else {
+                currentEmail = emails[0];
+                displayDiv.textContent = currentEmail;
+                btn.disabled = false;
+            }
+        });
+
+        // 点击按钮：复制并删除第一个邮箱
+        document.getElementById('copyBtn').addEventListener('click', async () => {
+            if (!currentEmail) return;
+            await copyToClipboard(currentEmail);
+            document.getElementById('msg').textContent = '已复制，正在删除...';
+
+            // 使用事务安全删除第一个邮箱
+            try {
+                await runTransaction(poolRef, (emails) => {
+                    if (emails && Array.isArray(emails) && emails.length > 0) {
+                        // 只删除第一个
+                        emails.shift();
+                        return emails;
+                    }
+                    return []; // 已经空了
+                });
+                document.getElementById('msg').textContent = '已复制并移除，下一个邮箱已显示';
+            } catch (error) {
+                document.getElementById('msg').textContent = '操作失败，请刷新重试';
+                console.error('事务失败:', error);
+            }
+        });
+    </script>
+</body>
+</html>
