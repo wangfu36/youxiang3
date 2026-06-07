@@ -2,112 +2,382 @@
 <html lang="zh">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>共享邮箱池</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>共享邮箱池 - 实时同步取号</title>
     <style>
-        body { font-family: Arial, sans-serif; text-align: center; margin-top: 80px; background: #f5f5f5; }
-        #emailDisplay { font-size: 24px; font-weight: bold; margin: 30px; padding: 20px; border: 2px dashed #4CAF50; display: inline-block; min-width: 250px; background: white; border-radius: 8px; }
-        button { font-size: 18px; padding: 10px 30px; cursor: pointer; background: #4CAF50; color: white; border: none; border-radius: 5px; }
-        button:disabled { background: #ccc; }
-        #msg { color: #666; margin-top: 20px; }
+        * {
+            box-sizing: border-box;
+            user-select: none; /* 避免按钮双击选中文字，不影响复制功能 */
+        }
+        body {
+            font-family: system-ui, 'Segoe UI', 'Roboto', 'Noto Sans', sans-serif;
+            text-align: center;
+            background: #f1f5f9;
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .card {
+            max-width: 650px;
+            width: 100%;
+            background: white;
+            border-radius: 2rem;
+            box-shadow: 0 20px 35px -12px rgba(0, 0, 0, 0.15);
+            padding: 2rem 1.8rem 2.5rem;
+            transition: all 0.2s;
+        }
+        h1 {
+            font-size: 1.8rem;
+            font-weight: 600;
+            margin: 0 0 0.25rem 0;
+            color: #0f172a;
+            letter-spacing: -0.3px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        h1:before {
+            content: "📬";
+            font-size: 1.7rem;
+        }
+        .sub {
+            color: #475569;
+            margin-bottom: 1.5rem;
+            font-size: 0.9rem;
+            border-bottom: 1px solid #e2e8f0;
+            display: inline-block;
+            padding-bottom: 6px;
+        }
+        #emailDisplay {
+            background: #f8fafc;
+            font-size: 1.6rem;
+            font-weight: 600;
+            font-family: 'SF Mono', 'Fira Code', monospace;
+            margin: 1.2rem 0 1rem;
+            padding: 1.2rem 1rem;
+            border: 2px solid #cbd5e1;
+            border-radius: 28px;
+            display: inline-block;
+            min-width: 260px;
+            width: 100%;
+            word-break: break-all;
+            color: #0f172a;
+            background: #ffffff;
+            box-shadow: inset 0 1px 3px #00000008, 0 1px 2px #fff;
+            transition: 0.2s;
+        }
+        button {
+            font-size: 1.2rem;
+            font-weight: 600;
+            padding: 14px 28px;
+            cursor: pointer;
+            background: #10b981;
+            color: white;
+            border: none;
+            border-radius: 60px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+            transition: 0.2s ease;
+            width: 80%;
+            max-width: 320px;
+            margin-top: 10px;
+        }
+        button:active {
+            transform: scale(0.97);
+            background: #059669;
+        }
+        button:disabled {
+            background: #94a3b8;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+            opacity: 0.7;
+        }
+        #msg {
+            margin-top: 24px;
+            font-size: 0.9rem;
+            color: #2c3e66;
+            background: #eef2ff;
+            display: inline-block;
+            padding: 8px 18px;
+            border-radius: 50px;
+            font-weight: 500;
+            max-width: 90%;
+        }
+        .status-badge {
+            margin-top: 20px;
+            font-size: 0.75rem;
+            color: #5b6e8c;
+            background: #eef2ff80;
+            padding: 6px 12px;
+            border-radius: 30px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .status-badge::before {
+            content: "⚡";
+            font-size: 0.8rem;
+        }
+        hr {
+            margin: 1.5rem 0 0.5rem;
+            border: none;
+            border-top: 1px solid #e2e8f0;
+        }
+        footer {
+            font-size: 0.7rem;
+            color: #6c7a91;
+            margin-top: 1rem;
+        }
+        @media (max-width: 500px) {
+            .card { padding: 1.5rem; }
+            #emailDisplay { font-size: 1.2rem; padding: 1rem; }
+            button { width: 100%; font-size: 1rem; }
+        }
     </style>
 </head>
 <body>
-    <h1>可用邮箱</h1>
-    <div id="emailDisplay">加载中...</div>
+<div class="card">
+    <h1>共享邮箱池</h1>
+    <div class="sub">· 实时同步 · 即取即用 ·</div>
+    <div id="emailDisplay">⚡ 连接中...</div>
     <br>
-    <button id="copyBtn">点击复制并获取下一个</button>
-    <div id="msg"></div>
+    <button id="copyBtn" disabled>📋 复制并领取下一个</button>
+    <div id="msg">💡 点击按钮自动复制邮箱，并从池中移除</div>
+    <hr />
+    <div class="status-badge">实时数据同步 | 多人取号不重复</div>
+    <footer>每个邮箱仅能被领取一次，刷新页面同步最新池子</footer>
+</div>
 
-    <script>
-        // ===== 配置：改成你自己的 Worker 域名 =====
-        const WORKER_URL = 'https://enail-proxy.pangdonglai88.workers.dev/emailPool.json';
-        // =========================================
+<!-- Firebase SDK v10.12.0 模块化 -->
+<script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+    import { getDatabase, ref, onValue, runTransaction } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
 
-        let currentEmails = [];
-        let pollingTimer = null;
-        let isPending = false; // 防止重复提交
+    // ==================== 你的真实 Firebase 配置 (来自我的.txt) ====================
+    const firebaseConfig = {
+        apiKey: "AIzaSyCLUwbTJmVE63YhrbY2g5GzvM1-8ppPXtM",
+        authDomain: "email-aca79.firebaseapp.com",
+        databaseURL: "https://email-aca79-default-rtdb.firebaseio.com",
+        projectId: "email-aca79",
+        storageBucket: "email-aca79.firebasestorage.app",
+        messagingSenderId: "83168551688",
+        appId: "1:83168551688:web:8530dc20569dcdf36102bd",
+        measurementId: "G-EGLZZZ9CWR"
+    };
+    // ============================================================================
 
-        async function copyToClipboard(text) {
-            try {
-                await navigator.clipboard.writeText(text);
-            } catch (err) {
-                const textarea = document.createElement('textarea');
-                textarea.value = text;
-                document.body.appendChild(textarea);
-                textarea.select();
-                document.execCommand('copy');
-                document.body.removeChild(textarea);
+    // 初始化 Firebase
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    // 引用数据库中的邮箱池数组节点 (建议数据库中对应一个数组: emailPool)
+    const poolRef = ref(db, 'emailPool');
+
+    let currentEmail = '';          // 当前展示的第一个邮箱
+    let isProcessing = false;       // 防止快速双击导致重复事务
+
+    const emailDisplayDiv = document.getElementById('emailDisplay');
+    const copyBtn = document.getElementById('copyBtn');
+    const msgDiv = document.getElementById('msg');
+
+    // 辅助: 优雅复制文本 (兼容移动端)
+    async function copyToClipboard(text) {
+        // 如果文本为空则不复制
+        if (!text) return false;
+        try {
+            await navigator.clipboard.writeText(text);
+            return true;
+        } catch (err) {
+            // 降级方案: textarea
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            textarea.style.position = 'fixed';
+            textarea.style.top = '-9999px';
+            textarea.style.left = '-9999px';
+            document.body.appendChild(textarea);
+            textarea.select();
+            textarea.setSelectionRange(0, 99999);
+            const success = document.execCommand('copy');
+            document.body.removeChild(textarea);
+            return success;
+        }
+    }
+
+    // 显示临时消息（自动3秒后恢复默认提示，但保留重要错误或成功提示稍长）
+    function setMessage(text, isError = false) {
+        msgDiv.textContent = text;
+        msgDiv.style.backgroundColor = isError ? '#ffe4e2' : '#e6f7ec';
+        msgDiv.style.color = isError ? '#b91c1c' : '#166534';
+        // 3.5秒后若没有新消息覆盖，恢复温和提示但不覆盖最新的重要操作提示（避免误导）
+        setTimeout(() => {
+            // 只当当前消息还是这条旧消息时恢复默认
+            if (msgDiv.textContent === text && !isError) {
+                msgDiv.textContent = '✅ 邮箱就绪，点击领取';
+                msgDiv.style.backgroundColor = '#eef2ff';
+                msgDiv.style.color = '#2c3e66';
+            } else if (msgDiv.textContent === text && isError) {
+                // 错误状态保留稍微久一点但最后还是恢复友好提示
+                setTimeout(() => {
+                    if (msgDiv.textContent === text) {
+                        msgDiv.textContent = '✨ 可继续领取下一个';
+                        msgDiv.style.backgroundColor = '#eef2ff';
+                        msgDiv.style.color = '#2c3e66';
+                    }
+                }, 2000);
+            }
+        }, 3500);
+    }
+
+    // 更新UI显示当前邮箱 (根据池子第一个元素)
+    function updateDisplayFromPool(emailsArray) {
+        if (!emailsArray || !Array.isArray(emailsArray) || emailsArray.length === 0) {
+            emailDisplayDiv.textContent = '📭 邮箱已用完';
+            copyBtn.disabled = true;
+            currentEmail = '';
+            return;
+        }
+        const firstEmail = emailsArray[0];
+        if (firstEmail && typeof firstEmail === 'string') {
+            currentEmail = firstEmail;
+            emailDisplayDiv.textContent = currentEmail;
+            copyBtn.disabled = false;
+        } else {
+            // 防御：如果数组元素不是合法字符串，尝试修复或提示
+            console.warn('邮箱池数据异常', emailsArray);
+            emailDisplayDiv.textContent = '⚠️ 数据格式错误';
+            copyBtn.disabled = true;
+            currentEmail = '';
+        }
+    }
+
+    // 实时监听 Firebase 邮箱池的变化 (多人同步)
+    onValue(poolRef, (snapshot) => {
+        const emails = snapshot.val();
+        // 处理可能的数据格式: 如果是 null 或非数组，统一转为空数组
+        let emailList = [];
+        if (emails && Array.isArray(emails)) {
+            emailList = emails;
+        } else if (emails && typeof emails === 'object') {
+            // 极少数情况下如果存储成对象 {0:'xx',1:'yy'} 转为数组
+            emailList = Object.values(emails).filter(v => typeof v === 'string');
+        } else {
+            emailList = [];
+        }
+        // 更新界面
+        updateDisplayFromPool(emailList);
+        
+        // 如果没有邮箱了给出提示
+        if (emailList.length === 0) {
+            setMessage('⚠️ 邮箱池已空，请联系管理员补充', false);
+        } else {
+            // 不覆盖关键操作消息，仅在非忙碌时显示常规就绪消息
+            if (!isProcessing) {
+                setMessage('📋 点击按钮复制邮箱并自动移除', false);
             }
         }
+    });
 
-        // 获取邮箱池
-        async function fetchEmails() {
-            try {
-                const resp = await fetch(WORKER_URL);
-                const data = await resp.json();
-                currentEmails = Array.isArray(data) ? data : [];
-                updateDisplay();
-            } catch (e) {
-                console.error('获取邮箱失败:', e);
-            }
+    // 点击领取: 复制当前邮箱 + 事务移除数组第一个元素
+    copyBtn.addEventListener('click', async () => {
+        // 防止并发点击，避免双倍移除 / 错误复制
+        if (isProcessing) {
+            setMessage('⏳ 操作中，请稍后...', false);
+            return;
+        }
+        if (!currentEmail) {
+            setMessage('❌ 当前没有可用邮箱，请刷新或等待补充', true);
+            return;
+        }
+        if (copyBtn.disabled) {
+            setMessage('⛔ 邮箱不可用，请稍后', true);
+            return;
         }
 
-        function updateDisplay() {
-            const display = document.getElementById('emailDisplay');
-            const btn = document.getElementById('copyBtn');
-            if (currentEmails.length === 0) {
-                display.textContent = '邮箱已用完';
-                btn.disabled = true;
-            } else {
-                display.textContent = currentEmails[0];
-                btn.disabled = false;
-            }
+        isProcessing = true;
+        // 临时禁用按钮避免重复请求，视觉反馈
+        copyBtn.disabled = true;
+        const originalBtnText = copyBtn.innerText;
+        copyBtn.innerText = '⏳ 处理中...';
+
+        // 1. 先复制邮箱到剪贴板（复制当前展示的邮箱）
+        const copySuccess = await copyToClipboard(currentEmail);
+        if (!copySuccess) {
+            setMessage('⚠️ 复制失败，可手动复制邮箱', true);
+            // 复制失败仍然继续移除？为了数据一致性，我们让用户手动刷新？不行，为了避免重复领取问题，如果复制失败就不删除邮箱
+            // 但更好的交互：复制失败就不进行删除，让用户再试一次
+            copyBtn.disabled = false;
+            copyBtn.innerText = originalBtnText;
+            isProcessing = false;
+            return;
         }
 
-        // 删除第一个邮箱并提交
-        async function removeFirstEmail() {
-            if (isPending || currentEmails.length === 0) return;
-            isPending = true;
-            const removed = currentEmails[0];
-            const newList = currentEmails.slice(1);
-            try {
-                const resp = await fetch(WORKER_URL, {
-                    method: 'PUT',
-                    body: JSON.stringify(newList),
-                    headers: { 'Content-Type': 'application/json' }
-                });
-                if (resp.ok) {
-                    currentEmails = newList;
-                    updateDisplay();
-                    document.getElementById('msg').textContent = `已复制并移除 ${removed}`;
+        // 复制成功, 显示短暂反馈
+        setMessage(`✅ 已复制: ${currentEmail} ，正在从池中移除此邮箱...`, false);
+        
+        // 2. 使用事务安全删除第一个邮箱 (移除数组头部)
+        try {
+            await runTransaction(poolRef, (currentData) => {
+                let emailsList = [];
+                // 处理当前快照数据格式
+                if (currentData && Array.isArray(currentData)) {
+                    emailsList = [...currentData];
+                } else if (currentData && typeof currentData === 'object') {
+                    emailsList = Object.values(currentData).filter(v => typeof v === 'string');
                 } else {
-                    // 更新失败，可能被别人抢先了，重新拉取一次
-                    await fetchEmails();
-                    document.getElementById('msg').textContent = '稍等，正在同步...';
+                    emailsList = [];
                 }
-            } catch (e) {
-                document.getElementById('msg').textContent = '网络错误，请重试';
+                
+                if (emailsList.length === 0) {
+                    // 池子已经为空，返回不变
+                    return [];
+                }
+                // 移除第一个邮箱（正是复制的那个）
+                emailsList.shift();
+                return emailsList;
+            }).then((result) => {
+                // 事务提交成功，但需要检查是否被中断
+                if (result.committed) {
+                    setMessage(`🎉 成功！已领取 ${currentEmail}，下一个邮箱自动就位`, false);
+                } else {
+                    // 极少情况: 事务被拒绝（比如数据同时被他人修改导致重试失败），不过一般会自动重试
+                    setMessage(`⚠️ 操作冲突，邮箱可能已被其他人领取，刷新后查看最新池子`, true);
+                }
+                // 不论committed与否，重置状态。但注意因为 onValue 会同步最新数据，界面已更新
+            });
+        } catch (error) {
+            console.error('事务删除异常:', error);
+            setMessage(`❌ 服务器错误: ${error.message || '请检查网络或刷新重试'}`, true);
+        } finally {
+            // 重置按钮状态，但注意此时currentEmail可能会因为 onValue 回调变化。
+            // 为了用户体验，延迟一小段时间再启用按钮，防止快速点击
+            setTimeout(() => {
+                // 再次检查当前池子是否还有内容决定按钮是否启用
+                if (currentEmail) {
+                    copyBtn.disabled = false;
+                } else {
+                    copyBtn.disabled = true;
+                }
+                copyBtn.innerText = '📋 复制并领取下一个';
+                isProcessing = false;
+            }, 600);
+        }
+    });
+
+    // 附加： 监听页面显示/隐藏时不做额外动作，但保证实时性
+    window.addEventListener('load', () => {
+        // 初始加载，显示连接提示
+        setMessage('🔄 同步邮箱池中...', false);
+        // 2秒后若未更新可显示
+        setTimeout(() => {
+            if (currentEmail === '' && copyBtn.disabled !== false) {
+                // 尚未加载到数据
+                setMessage('⏳ 等待数据同步，若长时间无反应请检查网络或数据库', false);
             }
-            isPending = false;
-        }
-
-        // 复制按钮
-        document.getElementById('copyBtn').addEventListener('click', async () => {
-            if (currentEmails.length === 0) return;
-            const email = currentEmails[0];
-            await copyToClipboard(email);
-            document.getElementById('msg').textContent = '已复制，正在删除...';
-            await removeFirstEmail();
-        });
-
-        // 轮询同步（2 秒一次）
-        function startPolling() {
-            fetchEmails();
-            pollingTimer = setInterval(fetchEmails, 2000);
-        }
-
-        startPolling();
-    </script>
+        }, 2000);
+    });
+</script>
 </body>
 </html>
